@@ -7,7 +7,6 @@ from enum import auto, Flag
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
-
 from hta.analyzers.breakdown_analysis import BreakdownAnalysis
 from hta.analyzers.communication_analysis import CommunicationAnalysis
 from hta.analyzers.critical_path_analysis import CPGraph, CriticalPathAnalysis
@@ -159,7 +158,7 @@ class TraceAnalysis:
         self,
         rank: int,
         expand_names: bool = True,
-        shortern_names: bool = True,
+        shorten_names: bool = True,
     ) -> Optional[pd.DataFrame]:
         r"""
         Provides a complete dataframe of GPU kernels and matches them to the corresponding user annotation i.e. user provided training phase. The output is a dataframe with all GPU kernel data alongside a "user_annotation" column.
@@ -168,7 +167,7 @@ class TraceAnalysis:
             rank (int): Specify rank to return GPU kernels for.
             expand_names (bool): Expand integer name value to full names. This will add
                 the columns "s_name" and "s_user_annotation" to the dataframe.
-            shortern_names (bool): When expand_names is True, this flag enables shortening
+            shorten_names (bool): When expand_names is True, this flag enables shortening
                 large CUDA kernel names. This works by removing the '<' template parameters etc.
 
         Returns:
@@ -182,7 +181,7 @@ class TraceAnalysis:
             self.t,
             rank,
             expand_names,
-            shortern_names,
+            shorten_names,
         )
 
     def get_gpu_user_annotation_breakdown(
@@ -540,7 +539,7 @@ class TraceAnalysis:
     def get_memory_bw_summary(
         self,
         ranks: Optional[List[int]] = None,
-    ) -> pd.DataFrame:
+    ) -> Optional[pd.DataFrame]:
         r"""
         Summarizes the memory bandwidth statistics for memory copy and memset operations. This includes memory
         bandwidth for copies from Device to Host, Host to Device and Device to Device transfers. Note, this does
@@ -676,7 +675,7 @@ class TraceAnalysis:
         annotation: str,
         instance_id: Union[Optional[int], Tuple[int, int]],
         data_load_events: Optional[List[str]] = None,
-    ) -> Tuple[CPGraph, bool]:
+    ) -> Optional[Tuple[CPGraph, bool]]:
         r"""
         Perform critical path analysis for trace events within a rank.
         We further reduce the region of interest by selecting

@@ -15,6 +15,7 @@ import hta
 import pandas as pd
 from hta.common.trace import PHASE_COUNTER
 from hta.trace_analysis import TimeSeriesTypes, TraceAnalysis
+from hta.utils.test_utils import get_test_data_dir
 
 
 class TraceAnalysisTestCase(unittest.TestCase):
@@ -22,7 +23,7 @@ class TraceAnalysisTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super(TraceAnalysisTestCase, cls).setUpClass()
-        cls.base_data_dir = add_test_data_path_prefix_if_exists("tests/data")
+        cls.base_data_dir = get_test_data_dir()
         cls.vision_transformer_trace_dir: str = os.path.join(
             cls.base_data_dir, "vision_transformer"
         )
@@ -309,11 +310,13 @@ class TraceAnalysisTestCase(unittest.TestCase):
         )
 
         self.assertEqual(kernel_type_breakdown.iloc[0]["kernel_type"], "COMPUTATION")
-        self.assertEqual(kernel_type_breakdown.iloc[0]["sum"], 7304578)
+        # Note: With the fix to skip filtering when only 1 ProfilerStep exists,
+        # all events are preserved, resulting in slightly higher totals.
+        self.assertEqual(kernel_type_breakdown.iloc[0]["sum"], 7305597)
         self.assertEqual(kernel_breakdown.iloc[0]["kernel_type"], "COMPUTATION")
         self.assertEqual(kernel_breakdown.iloc[0]["sum (us)"], 77283.0)
         self.assertEqual(kernel_breakdown.iloc[11]["kernel_type"], "MEMORY")
-        self.assertEqual(kernel_breakdown.iloc[11]["sum (us)"], 403067.0)
+        self.assertEqual(kernel_breakdown.iloc[11]["sum (us)"], 400892.0)
 
     def __test_gpu_user_annotation_common(
         self, use_gpu_annotation: bool, expected_rows: int
@@ -379,7 +382,7 @@ class TraceAnalysisTestCase(unittest.TestCase):
         gpu_kernels_df = self.ns_resolution_t.get_gpu_kernels_with_user_annotations(
             rank=0,
             expand_names=True,
-            shortern_names=True,
+            shorten_names=True,
         )
         self.assertEqual(len(gpu_kernels_df), 4876)
         # 3 unique annotations, +one for -1
@@ -596,11 +599,14 @@ class TraceAnalysisTestCase(unittest.TestCase):
         idle_categories = idle_time_df.idle_category.unique()
 
         self.assertEqual(set(ranks), {0})
-        self.assertEqual(set(streams), {1, 102, 801})
+        # Note: With the fix to skip filtering when only 1 ProfilerStep exists,
+        # all trace events are preserved instead of filtering by ProfilerStep time
+        # boundaries. This changes the set of streams that appear in the analysis.
+        self.assertEqual(set(streams), {1, 102})
         self.assertEqual(set(idle_categories), {"host_wait", "kernel_wait", "other"})
 
         # Ratios sum up to 1.0, 2 streams x 1 ranks = 2.0
-        self.assertAlmostEqual(idle_time_df.idle_time_ratio.sum(), 3.0)
+        self.assertAlmostEqual(idle_time_df.idle_time_ratio.sum(), 2.0)
 
         stream1_stats = idle_time_df[idle_time_df.stream == 1].iloc[0].to_dict()
         expected_stats = {
@@ -616,14 +622,6 @@ class TraceAnalysisTestCase(unittest.TestCase):
                 expval,
                 msg=f"Stream 1 idle stats mismatch key={key}",
             )
-
-
-def add_test_data_path_prefix_if_exists(test_path):
-    """Add TEST_DATA_PREFIX_PATH to the test path if it exists"""
-    needs_prefix = os.environ.get("TEST_DATA_PREFIX_PATH", "")
-    if needs_prefix:
-        return needs_prefix + "/" + test_path
-    return test_path
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Dict, List, Optional, Set, Union
 
 import pandas as pd
-
+from hta.common.constants import MAX_EVENT_DURATION_US
 from hta.configs.default_values import AttributeSpec, EventArgs, ValueType
 from hta.configs.event_args_yaml_parser import (
     parse_event_args_yaml,
@@ -114,8 +114,35 @@ class ParserConfig:
         # config to convert ts to nearest integer
         self.convert_ts_to_integer = convert_ts_to_integer
 
+        # Max valid event duration in microseconds. Events exceeding this are
+        # dropped as corrupted (e.g. CUPTI timestamp overflow). Set to None to disable.
+        self.max_event_duration_us: Optional[int] = MAX_EVENT_DURATION_US
+
     def clone(self) -> "ParserConfig":
         return copy.deepcopy(self)
+
+    def get_fingerprint_key(self) -> tuple[tuple[str, ...], bool]:
+        """Return a hashable key representing the config for caching.
+
+        Captures only fields that affect parsing output:
+        - Sorted list of argument names from get_args()
+        - The parse_all_args flag
+
+        Returns:
+            A tuple of (sorted_arg_names, parse_all_args) suitable for hashing.
+        """
+        args_names = tuple(sorted(a.name for a in self.get_args()))
+        return (args_names, self.parse_all_args)
+
+    def __repr__(self) -> str:
+        """Return a human-readable representation of the ParserConfig."""
+        return (
+            f"ParserConfig("
+            f"args={[a.name for a in self.args]}, "
+            f"parse_all_args={self.parse_all_args}, "
+            f"parser_backend={self.parser_backend}, "
+            f"version={self.version.get_version_str()})"
+        )
 
     @classmethod
     def get_default_cfg(cls) -> "ParserConfig":
@@ -138,6 +165,7 @@ class ParserConfig:
         _DEFAULT_PARSER_CONFIG.set_parse_all_args(cfg.parse_all_args)
         _DEFAULT_PARSER_CONFIG.set_args_selector(cfg.selected_arg_keys)
         _DEFAULT_PARSER_CONFIG.set_skip_event_types(cfg.skip_event_types)
+        _DEFAULT_PARSER_CONFIG.max_event_duration_us = cfg.max_event_duration_us
 
     @classmethod
     def get_minimum_args(
@@ -188,7 +216,7 @@ class ParserConfig:
     def set_drop_gpu_user_annotation(self, should_drop: bool) -> None:
         self.drop_gpu_user_annotation = should_drop
 
-    def set_parser_backend(self, parser_backend: ParserBackend) -> None:
+    def set_parser_backend(self, parser_backend: Optional[ParserBackend]) -> None:
         self.parser_backend = parser_backend
 
     def set_parse_all_args(self, parse_all_args: bool) -> "ParserConfig":
@@ -204,7 +232,9 @@ class ParserConfig:
     def set_skip_event_types(
         self, skip_event_types: Optional[Set[str]] = None
     ) -> "ParserConfig":
-        self.skip_event_types = skip_event_types
+        self.skip_event_types = (
+            skip_event_types if skip_event_types is not None else set()
+        )
         return self
 
     @classmethod

@@ -37,8 +37,8 @@ def find_version(version_file_path) -> str:
 
 # -- Project information -----------------------------------------------------
 
-project = "Holistic Trace Analysis"
-copyright = "2023, Meta Platforms Inc."
+project = "TraceInsight"
+copyright = "2023-2026, Meta Platforms Inc."
 author = "Meta Platforms Inc."
 repo_root_path = pathlib.Path(__file__).absolute().parents[1]
 release = find_version(str(repo_root_path) + "/hta/version.py")

@@ -10,7 +10,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from hta.common.trace_filter import GPUKernelFilter
 from hta.common.trace_symbol_table import decode_symbol_id_to_symbol_name
-
 from hta.configs.config import logger
 from hta.utils.utils import (
     get_kernel_type,
@@ -308,7 +307,7 @@ class BreakdownAnalysis:
             # Loop over all GPU user annotation intervals and match them with GPU
             # kernel intervals. Build updates using integer positions.
             for row in gpu_user_anno_df_filt.itertuples():
-                interval, anno_name = row.Index, row.name
+                interval, anno_name = row.Index, row.name  # type: ignore[attr-defined]
 
                 # Check overlap only on the pre-filtered kernel positions
                 overlaps = kernel_positions.overlaps(interval)
@@ -329,7 +328,7 @@ class BreakdownAnalysis:
         t: "Trace",
         rank: int,
         expand_names: bool = True,
-        shortern_names: bool = True,
+        shorten_names: bool = True,
     ) -> Optional[pd.DataFrame]:
         """Returns a dataframe of all GPU kernels and associates them to closest or leaf
         GPU user annotation. If the kernel overlaps with multiple user annotations,
@@ -354,7 +353,7 @@ class BreakdownAnalysis:
 
         if expand_names:
             decode_symbol_id_to_symbol_name(
-                gpu_kernels_df, t.symbol_table, shortern_names
+                gpu_kernels_df, t.symbol_table, shorten_names
             )
 
         return gpu_kernels_df.reset_index(drop=True)

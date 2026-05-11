@@ -10,7 +10,6 @@ import unittest
 from typing import Dict, Iterable, List, Set
 
 import pandas as pd
-
 from hta.common.trace_symbol_table import TraceSymbolTable
 from hta.common.types import GroupingPattern
 from hta.utils.test_utils import data_provider
@@ -173,6 +172,55 @@ class TraceSymbolTableTestCase(unittest.TestCase):
         self.assertListEqual(
             df_original["cat"].to_list(), df_decoded["s_cat"].to_list()
         )
+
+    # AI-assisted test
+    def test_create_from_df_with_string_dtype(self) -> None:
+        """Test create_from_df with explicit StringDtype (lines 242, 244)."""
+        df = pd.DataFrame(
+            data={
+                "name": pd.array(["a", "b", "a", "c"], dtype="string"),
+                "cat": pd.array(
+                    ["kernel", "cpu_op", "kernel", "user_annotation"], dtype="string"
+                ),
+            }
+        )
+        t = TraceSymbolTable.create_from_df(df)
+        self.assertSetEqual(
+            set(t.get_sym_table_series().to_list()),
+            {"a", "b", "c", "kernel", "cpu_op", "user_annotation"},
+        )
+
+    # AI-assisted test
+    def test_create_from_df_rejects_non_string_columns(self) -> None:
+        """Test create_from_df raises ValueError for non-string columns (lines 242, 244)."""
+        df = pd.DataFrame(data={"name": [1, 2, 3], "cat": [4, 5, 6]})
+        with self.assertRaises(ValueError):
+            TraceSymbolTable.create_from_df(df)
+
+    # AI-assisted test
+    def test_encode_df_with_string_dtype(self) -> None:
+        """Test encode_df with explicit StringDtype (line 271)."""
+        df = pd.DataFrame(
+            data={
+                "name": pd.array(["a", "b", "a", "c"], dtype="string"),
+                "cat": pd.array(
+                    ["kernel", "cpu_op", "kernel", "user_annotation"], dtype="string"
+                ),
+            }
+        )
+        st = TraceSymbolTable.create_from_df(df)
+        original_names = df["name"].tolist()
+        st.encode_df(df)
+        # After encoding, name and cat should be integer IDs
+        self.assertTrue(
+            df["name"].dtype.kind == "i", "name should be integer after encode"
+        )
+        self.assertTrue(
+            df["cat"].dtype.kind == "i", "cat should be integer after encode"
+        )
+        # Decode and verify round-trip
+        st.decode_df(df)
+        self.assertListEqual(df["s_name"].tolist(), original_names)
 
     # pyre-ignore[56]
     @data_provider(

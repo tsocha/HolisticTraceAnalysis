@@ -7,12 +7,10 @@ import json
 import logging
 import sys
 import time
-
-from typing import List
+from typing import Any, List
 
 import numpy as np
 import pandas as pd
-
 from hta.common.trace import Trace
 from hta.configs.config import logger
 from hta.utils.utils import normalize_path
@@ -25,8 +23,11 @@ try:
 except ImportError:
     IMPORT_EXECUTION_TRACE_SUCCESSFULLY = False
 
-    class ExecutionTrace:  # type: ignore
-        pass
+    class ExecutionTrace:  # type: ignore[no-redef]
+        nodes: Any = None
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
 
 
 # PyTorch Events types that are correlated in the Execution Trace
